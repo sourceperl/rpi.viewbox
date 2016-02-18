@@ -10,8 +10,8 @@ this informations are available on a local MQTT broker.
 A script check regulary the number of unread mail on an IMAP server. The result
 is also display on the panel.
 
-Requirements
-------------
+Setup
+-----
 
 ## Python
 
@@ -19,10 +19,19 @@ Requirements
 
     sudo pip install -r requirements.txt
 
-### Github lib
+### Github lib (LCD driver)
 
     git clone https://github.com/sourceperl/rpi.lcd-i2c.git
     cd rpi.lcd-i2c
     sudo python setup.py install
 
+## Bin
+
+    sudo cp usr/local/bin/* /usr/local/bin
+
+## Supervisor
+
+    sudo apt-get install supervisor
+    sudo cp etc/supervisor/conf.d/* /etc/supervisor/conf.d/
+    sudo supervisorctl update
 
