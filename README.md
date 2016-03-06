@@ -10,6 +10,8 @@ this informations are available on a local MQTT broker.
 A script check regulary the number of unread mail on an IMAP server. The result
 is also display on the panel.
 
+![](img/viewbox.jpg)
+
 Setup
 -----
 
