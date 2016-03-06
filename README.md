@@ -17,13 +17,13 @@ Setup
 
 ### PyPi lib
 
-    sudo pip install -r requirements.txt
+    sudo pip3 install -r requirements.txt
 
 ### Github lib (LCD driver)
 
     git clone https://github.com/sourceperl/rpi.lcd-i2c.git
     cd rpi.lcd-i2c
-    sudo python setup.py install
+    sudo python3 setup.py install
 
 ## Bin
 

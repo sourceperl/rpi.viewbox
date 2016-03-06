@@ -1,9 +1,9 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import time
 import json
 import threading
-import sys
+import schedule
 import paho.mqtt.client as mqtt
 import RPi_I2C_LCD
 
@@ -14,8 +14,6 @@ vig_level = {
     3: 'O',
     4: 'R',
 }
-
-th_lock = threading.Lock()
 vig_59 = 'I'
 vig_59_up = 0
 vig_62 = 'I'
@@ -47,55 +45,77 @@ def on_message(client, userdata, msg):
     global vig_62, vig_62_up
     global p_atmo, p_atmo_up
     global t_atmo, t_atmo_up
-    global vig_level
     global nb_mail, nb_mail_up
-    # thread lock
-    th_lock.acquire()
     # process topic
     if msg.topic == 'pub/meteo_vig/dep/59':
         try:
-            index = int(json.loads(msg.payload)['value'])
+            index = int(json.loads(msg.payload.decode())['value'])
             vig_59 = vig_level[index]
             vig_59_up = int(time.time())
         except:
             pass
     elif msg.topic == 'pub/meteo_vig/dep/62':
         try:
-            index = int(json.loads(msg.payload)['value'])
+            index = int(json.loads(msg.payload.decode())['value'])
             vig_62 = vig_level[index]
             vig_62_up = int(time.time())
         except:
             pass
     elif msg.topic == 'pub/house/garden/pressure_sea_level':
         try:
-            p_atmo = float(json.loads(msg.payload)['value'])
+            p_atmo = float(json.loads(msg.payload.decode())['value'])
             p_atmo_up = int(time.time())
         except:
             pass
     elif msg.topic == 'pub/house/garden/temperature':
         try:
-            t_atmo = float(json.loads(msg.payload)['value'])
+            t_atmo = float(json.loads(msg.payload.decode())['value'])
             t_atmo_up = int(time.time())
         except:
             pass
     elif msg.topic == 'pub/mail/loic.celine/unread':
         try:
-            nb_mail = int(json.loads(msg.payload)['value'])
+            nb_mail = int(json.loads(msg.payload.decode())['value'])
             nb_mail_up = int(time.time())
         except:
             pass
-    # thread unlock
-    th_lock.release()
 
 
-def main():
+def lcd_job():
     # global vars
     global vig_59, vig_59_up
     global vig_62, vig_62_up
     global p_atmo, p_atmo_up
     global t_atmo, t_atmo_up
-    global vig_level
     global nb_mail, nb_mail_up
+    # format and display
+    now = int(time.time())
+    # l1
+    p_atmo_str = '%7.2f hPa' % p_atmo if (now - p_atmo_up < 240) else '      ? hPa'
+    vig_59 = vig_59 if (now - vig_59_up < 3600) else str('?')
+    line1 = str('%s     59:%c' % (p_atmo_str, vig_59)).ljust(20)[:20]
+    # l2
+    t_atmo_str = '%7.2f C' % t_atmo if (now - t_atmo_up < 240) else '      ? C'
+    vig_62 = vig_62 if (now - vig_62_up < 3600) else str('?')
+    line2 = str('%s       62:%c' % (t_atmo_str, vig_62)).ljust(20)[:20]
+    # l3
+    str_mail = str(nb_mail) if (now - nb_mail_up < 900) else '?'
+    line3 = '%7s %s' % (str_mail, 'e-mails' if (nb_mail > 1) else 'e-mail')
+    line3 = line3.ljust(20)[:20]
+    # l4
+    datetime = time.strftime('%d/%m/%Y  %H:%M:%S', time.localtime())
+    line4 = (datetime).ljust(20)[:20]
+    # send result to LCD
+    lcd.set_cursor(row=0)
+    lcd.message(line1)
+    lcd.set_cursor(row=1)
+    lcd.message(line2)
+    lcd.set_cursor(row=2)
+    lcd.message(line3)
+    lcd.set_cursor(row=3)
+    lcd.message(line4)
+
+if __name__ == '__main__':
     # init LCD screen
     lcd = RPi_I2C_LCD.LCD()
     lcd.set_backlight(True)
@@ -106,42 +126,12 @@ def main():
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
     client.on_message = on_message
-    client.connect('test.mosquitto.org', port=1883, keepalive=30)
+    client.connect('192.168.1.60', port=1883, keepalive=30)
     client.loop_start()
+    # schedule conf.
+    schedule.every(.5).seconds.do(lcd_job)
+    # main loop
     while True:
-        # main loop run every 300 ms
-        time.sleep(0.2)
-        # thread lock
-        th_lock.acquire()
-        # main loop
-        now = int(time.time())
-        # l1
-        p_atmo_str = '%7.2f hPa' % p_atmo if (now - p_atmo_up < 240) else '      ? hPa'
-        vig_59 = vig_59 if (now - vig_59_up < 3600) else str('?')
-        line1 = str('%s     59:%c' % (p_atmo_str, vig_59)).ljust(20)[:20]
-        # l2
-        t_atmo_str = '%7.2f C' % t_atmo if (now - t_atmo_up < 240) else '      ? C'
-        vig_62 = vig_62 if (now - vig_62_up < 3600) else str('?')
-        line2 = str('%s       62:%c' % (t_atmo_str, vig_62)).ljust(20)[:20]
-        # l3
-        str_mail = str(nb_mail) if (now - nb_mail_up < 900) else '?'
-        line3 = '%7s %s' % (str_mail, 'e-mails' if (nb_mail > 1) else 'e-mail')
-        line3 = line3.ljust(20)[:20]
-        # l4
-        datetime = time.strftime('%d/%m/%Y  %H:%M:%S', time.localtime())
-        line4 = (datetime).ljust(20)[:20]
-        # thread unlock
-        th_lock.release()
-        # send result to datastore
-        lcd.set_cursor(row=0)
-        lcd.message(line1)
-        lcd.set_cursor(row=1)
-        lcd.message(line2)
-        lcd.set_cursor(row=2)
-        lcd.message(line3)
-        lcd.set_cursor(row=3)
-        lcd.message(line4)
+        schedule.run_pending()
+        time.sleep(.1)
 
-if __name__ == '__main__':
-    main()
-    sys.exit(0)
