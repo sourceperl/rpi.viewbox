@@ -26,7 +26,7 @@ nb_mail = 0
 nb_mail_up = 0
 
 
-def on_connect(client, userdata, rc):
+def on_connect(client, userdata, flags, rc):
     print('Connected with result code ' + str(rc))
     client.subscribe('pub/meteo_vig/dep/59')
     client.subscribe('pub/meteo_vig/dep/62')
@@ -91,11 +91,11 @@ def lcd_job():
     # format and display
     now = int(time.time())
     # l1
-    p_atmo_str = '%7.2f hPa' % p_atmo if (now - p_atmo_up < 240) else '      ? hPa'
+    p_atmo_str = '%7.2f hPa' % p_atmo if (now - p_atmo_up < 360) else '      ? hPa'
     vig_59 = vig_59 if (now - vig_59_up < 3600) else str('?')
     line1 = str('%s     59:%c' % (p_atmo_str, vig_59)).ljust(20)[:20]
     # l2
-    t_atmo_str = '%7.2f C' % t_atmo if (now - t_atmo_up < 240) else '      ? C'
+    t_atmo_str = '%7.2f C' % t_atmo if (now - t_atmo_up < 360) else '      ? C'
     vig_62 = vig_62 if (now - vig_62_up < 3600) else str('?')
     line2 = str('%s       62:%c' % (t_atmo_str, vig_62)).ljust(20)[:20]
     # l3
